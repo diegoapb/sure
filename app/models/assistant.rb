@@ -39,6 +39,7 @@ module Assistant
       classes = [
         Function::GetTransactions,
         Function::GetAccounts,
+        Function::CreateAccount,
         Function::GetHoldings,
         Function::GetBalanceSheet,
         Function::GetIncomeStatement,
