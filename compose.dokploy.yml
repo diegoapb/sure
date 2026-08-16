@@ -1,0 +1,156 @@
+# ============================================================================
+# Sure — despliegue en Dokploy (fork diegoapb/sure)
+# ============================================================================
+# Construye la imagen desde el Dockerfile de ESTE repo, por lo que cada push a
+# la rama configurada en Dokploy genera una imagen nueva con tus cambios.
+#
+# Reutiliza la infraestructura compartida del host Dokploy vía `dokploy-network`:
+#   - Postgres -> servicio `labs`  (databases-labs-bkbvsy)
+#   - Redis    -> servicio `Redis` (databases-redis-vlzs7g)
+# El servicio `db-init` crea (de forma idempotente) el rol y la base de datos
+# dedicados de este stack antes de arrancar la app. Las migraciones las corre
+# el entrypoint de `web` (bin/docker-entrypoint -> rails db:prepare).
+#
+# Dokploy:
+#   - Compose Path: ./compose.dokploy.yml
+#   - Dominio: apuntar al servicio `web`, puerto 3000 (la imagen EXPONE 3000 y
+#     Rails dentro de Docker ya escucha en 0.0.0.0; no hace falta PORT/BINDING).
+#   - Todas las variables ${...} se definen en Dokploy → Environment.
+# ============================================================================
+
+x-app-env: &app-env
+  SELF_HOSTED: "true"
+  RAILS_ENV: production
+  RAILS_LOG_TO_STDOUT: "true"
+  RAILS_SERVE_STATIC_FILES: "true"
+  RAILS_FORCE_SSL: "true"
+  RAILS_ASSUME_SSL: "true"
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+  APP_DOMAIN: ${APP_DOMAIN}
+
+  # --- Base de datos dedicada (rol + db propios en el Postgres compartido) ---
+  # database.yml lee DB_HOST/DB_PORT + POSTGRES_USER/PASSWORD/DB.
+  DB_HOST: ${POSTGRES_HOST}
+  DB_PORT: "5432"
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB}
+
+  # --- Redis compartido: usar un índice de DB dedicado en la URL (p.ej. /3) ---
+  REDIS_URL: ${REDIS_URL}
+
+  # --- Oráculos de precios y FX ---
+  EXCHANGE_RATE_PROVIDER: twelve_data
+  SECURITIES_PROVIDERS: yahoo_finance,twelve_data
+  TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY}
+
+  # --- IA / MCP ---
+  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
+  MCP_API_TOKEN: ${MCP_API_TOKEN}
+  MCP_USER_EMAIL: ${MCP_USER_EMAIL}
+
+# Definición común de los contenedores de la app: web y worker solo declaran
+# aquello en lo que difieren (command, healthcheck, depends_on).
+x-app: &app
+  image: sure-dokploy:latest
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  environment:
+    <<: *app-env
+  volumes:
+    - sure-storage:/rails/storage
+  # DNS IPv4 explícito: evita cuelgues con hosts que resuelven IPv6 primero
+  # (Yahoo Finance; ver nota en compose.example.yml).
+  dns:
+    - 8.8.8.8
+    - 1.1.1.1
+  deploy:
+    resources:
+      limits:
+        memory: 1G
+  networks:
+    - dokploy-network
+
+services:
+  # ---------------------------------------------------------------- db-init
+  # Crea rol + base de datos dedicados en el Postgres compartido.
+  # Idempotente: si ya existen, solo re-asegura password/permisos.
+  # Corre y termina en cada deploy.
+  db-init:
+    image: postgres:16
+    restart: "no"
+    environment:
+      PGHOST: ${POSTGRES_HOST}
+      PGPORT: "5432"
+      PGUSER: ${PG_ADMIN_USER}
+      PGPASSWORD: ${PG_ADMIN_PASSWORD}
+      PGDATABASE: ${PG_ADMIN_DB}
+      APP_DB: ${POSTGRES_DB}
+      APP_USER: ${POSTGRES_USER}
+      APP_PASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -eu
+        echo "==> esperando a $$PGHOST:$$PGPORT"
+        for i in $$(seq 1 40); do pg_isready -q && break; sleep 2; done
+        pg_isready
+        echo "==> asegurando rol $$APP_USER"
+        if psql -tAc "SELECT 1 FROM pg_roles WHERE rolname = '$$APP_USER'" | grep -q 1; then
+          psql -v ON_ERROR_STOP=1 -q -c "ALTER ROLE \"$$APP_USER\" LOGIN PASSWORD '$$APP_PASSWORD'"
+        else
+          psql -v ON_ERROR_STOP=1 -q -c "CREATE ROLE \"$$APP_USER\" LOGIN PASSWORD '$$APP_PASSWORD'"
+        fi
+        echo "==> asegurando base de datos $$APP_DB"
+        if ! psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$$APP_DB'" | grep -q 1; then
+          psql -v ON_ERROR_STOP=1 -q -c "CREATE DATABASE \"$$APP_DB\" OWNER \"$$APP_USER\""
+        fi
+        echo "==> extensiones + permisos en $$APP_DB"
+        psql -v ON_ERROR_STOP=1 -q -d "$$APP_DB" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto"
+        psql -v ON_ERROR_STOP=1 -q -d "$$APP_DB" -c "ALTER SCHEMA public OWNER TO \"$$APP_USER\""
+        psql -v ON_ERROR_STOP=1 -q -d "$$APP_DB" -c "GRANT ALL ON SCHEMA public TO \"$$APP_USER\""
+        echo "==> db-init OK"
+    networks:
+      - dokploy-network
+
+  # -------------------------------------------------------------------- web
+  # Rails (puma) en el puerto 3000. Su entrypoint ejecuta `rails db:prepare`,
+  # así que es quien aplica las migraciones en cada deploy.
+  web:
+    <<: *app
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # ----------------------------------------------------------------- worker
+  # Sidekiq. Espera a que `web` esté sana para garantizar que las migraciones
+  # ya se aplicaron antes de procesar jobs.
+  worker:
+    <<: *app
+    command: bundle exec sidekiq
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f sidekiq > /dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  sure-storage:
+
+networks:
+  dokploy-network:
+    external: true
