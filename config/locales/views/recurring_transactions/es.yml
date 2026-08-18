@@ -15,6 +15,8 @@ es:
     settings:
       enable_label: Activar transacciones recurrentes
       enable_description: Detecta automáticamente patrones de transacciones recurrentes y muestra las próximas transacciones proyectadas.
+      enable_detection: Activar detección automática
+      disable_detection: Desactivar detección automática
     settings_updated: Configuración de transacciones recurrentes actualizada
     info:
       title: Detección Automática de Patrones
@@ -50,6 +52,67 @@ es:
       inactive: Inactiva
     badges:
       manual: Manual
+      transfer: Transferencia
+    new: Nueva transacción recurrente
+    edit: Editar
+    edit_title: Editar transacción recurrente
+    created: Transacción recurrente creada
+    updated: Transacción recurrente actualizada
+    matched: Transacción vinculada al patrón recurrente
+    execute: Ejecutar
+    match_existing: Vincular transacción existente
+    pause: Pausar
+    resume: Reanudar
+    delete: Eliminar
+    confirm_delete_title: "¿Eliminar transacción recurrente?"
+    previous_month: Mes anterior
+    next_month: Mes siguiente
+    today: Hoy
+    month_format: "%B %Y"
+    view_switcher: Vista
+    list_view: Lista
+    calendar_view: Calendario
+    inactive_section: Inactivas
+    last_seen: "Vista por última vez el %{date}"
+    executed_on: "Ejecutada el %{date}"
+    occurrence_status:
+      executed: Ejecutada
+      pending: Pendiente
+      overdue: Vencida
+    summary:
+      executed:
+        one: "%{count} ejecutada"
+        other: "%{count} ejecutadas"
+      pending:
+        one: "%{count} pendiente"
+        other: "%{count} pendientes"
+    no_occurrences:
+      title: Nada previsto este mes
+      description: No hay transacciones recurrentes activas previstas durante este mes.
+    match_title: "Vincular: %{name}"
+    match_subtitle: "Elige la transacción que corresponde a la ocurrencia esperada el %{date}"
+    match_action: Vincular
+    no_candidates:
+      title: No hay transacciones candidatas
+      description: No hay transacciones sin vincular en este mes para asociar a esta transacción recurrente.
+    form:
+      nature: Tipo
+      expense: Gasto
+      income: Ingreso
+      name: Nombre
+      name_placeholder: p. ej. Arriendo, Netflix, Gimnasio
+      merchant: Comercio
+      no_merchant: Sin comercio
+      account: Cuenta
+      any_account: Cualquier cuenta
+      amount: Importe
+      expected_day_of_month: Día esperado del mes
+      variance_details: Rango de importe esperado (opcional)
+      variance_help: Si el importe varía mes a mes, define el mínimo y máximo esperados para que la detección tolere la variación.
+      expected_amount_min: Importe mínimo
+      expected_amount_max: Importe máximo
+      create: Crear transacción recurrente
+      update: Actualizar transacción recurrente
     transfer_marked_as_recurring: Transferencia marcada como recurrente
     transfer_already_exists: Ya existe una transferencia recurrente para este par de cuentas
     transfer_creation_failed: Error al crear la transferencia recurrente. Revisa los detalles de la transferencia e inténtalo de nuevo.

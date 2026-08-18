@@ -6,6 +6,10 @@ class RecurringTransaction < ApplicationRecord
   belongs_to :destination_account, optional: true, class_name: "Account"
   belongs_to :merchant, optional: true
 
+  # Transactions explicitly linked to this pattern (executed occurrences).
+  # The FK nullifies on delete, so destroying a pattern keeps the transactions.
+  has_many :transactions, dependent: nil
+
   monetize :amount
   monetize :expected_amount_min, allow_nil: true
   monetize :expected_amount_max, allow_nil: true
@@ -64,6 +68,27 @@ class RecurringTransaction < ApplicationRecord
 
   def transfer?
     destination_account_id.present?
+  end
+
+  def display_name
+    merchant&.name.presence || name
+  end
+
+  # Explicitly link an existing transaction to this pattern (manual match or
+  # execution from the recurring module). Only advances the occurrence
+  # tracking when the transaction is not older than the last known
+  # occurrence, so matching a missed past month never regresses
+  # next_expected_date.
+  def link_transaction!(transaction)
+    entry = transaction.entry
+
+    ApplicationRecord.transaction do
+      transaction.update!(recurring_transaction: self)
+
+      if last_occurrence_date.nil? || entry.date >= last_occurrence_date
+        record_occurrence!(entry.date, entry.amount)
+      end
+    end
   end
 
   scope :for_family, ->(family) { where(family: family) }
@@ -163,6 +188,7 @@ class RecurringTransaction < ApplicationRecord
         name: name,
         currency: currency,
         expected_day: expected_day_of_month,
+        amount: amount,
         account: account
       )
       variance = amounts.empty? ? {} : {

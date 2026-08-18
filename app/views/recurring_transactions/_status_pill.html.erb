@@ -1,0 +1,15 @@
+<%# locals: (occurrence:) %>
+
+<% if occurrence.executed? %>
+  <%= render DS::Pill.new(
+      label: t("recurring_transactions.occurrence_status.executed"),
+      tone: :success, marker: false, icon: "circle-check") %>
+<% elsif occurrence.overdue? %>
+  <%= render DS::Pill.new(
+      label: t("recurring_transactions.occurrence_status.overdue"),
+      tone: :warning, marker: false, icon: "triangle-alert") %>
+<% else %>
+  <%= render DS::Pill.new(
+      label: t("recurring_transactions.occurrence_status.pending"),
+      tone: :neutral, marker: false, icon: "clock") %>
+<% end %>

@@ -7,8 +7,10 @@ class TransactionsController < ApplicationController
 
   def new
     prefill_params_from_duplicate!
+    prefill_params_from_recurring!
     super
     apply_duplicate_attributes!
+    apply_recurring_attributes!
     set_new_transaction_form_options
   end
 
@@ -119,6 +121,7 @@ class TransactionsController < ApplicationController
     @entry = account.entries.new(entry_params)
 
     if @entry.save
+      recurring_to_link&.link_transaction!(@entry.transaction)
       @entry.sync_account_later
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
@@ -466,6 +469,59 @@ class TransactionsController < ApplicationController
         merchant_id: duplicate_source.entryable.merchant_id
       )
       @entry.entryable.tag_ids = duplicate_source.entryable.tag_ids
+    end
+
+    # Executing a recurring transaction: prefill the form from the pattern so
+    # the user can tweak whatever varies (amount, account, ...) before saving.
+    def recurring_source
+      return @recurring_source if defined?(@recurring_source)
+
+      @recurring_source = begin
+        recurring = Current.family.recurring_transactions
+                           .accessible_by(Current.user)
+                           .find_by(id: params[:recurring_transaction_id])
+        recurring unless recurring&.transfer?
+      end
+    end
+
+    def prefill_params_from_recurring!
+      return unless recurring_source
+      params[:nature] ||= recurring_source.amount.negative? ? "inflow" : "outflow"
+      params[:account_id] ||= recurring_source.account_id&.to_s
+    end
+
+    def apply_recurring_attributes!
+      return unless recurring_source
+
+      amount = if recurring_source.manual? && recurring_source.expected_amount_avg.present?
+        recurring_source.expected_amount_avg
+      else
+        recurring_source.amount
+      end
+
+      occurrence_date = begin
+        Date.parse(params[:occurrence_date].to_s)
+      rescue ArgumentError
+        nil
+      end
+
+      @entry.assign_attributes(
+        name: recurring_source.display_name,
+        amount: amount.abs,
+        currency: recurring_source.currency,
+        # The form caps the date at today, so a future occurrence is dated today
+        date: [ occurrence_date || recurring_source.next_expected_date, Date.current ].min
+      )
+      @entry.entryable.merchant_id = recurring_source.merchant_id
+    end
+
+    # Family-scoped lookup of the pattern to link after a successful create.
+    def recurring_to_link
+      return nil if params[:recurring_transaction_id].blank?
+
+      Current.family.recurring_transactions
+             .accessible_by(Current.user)
+             .find_by(id: params[:recurring_transaction_id])
     end
 
     def set_entry_for_unlock

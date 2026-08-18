@@ -1,0 +1,128 @@
+<%# locals: (occurrence:, view:, month_param:) %>
+
+<% recurring_transaction = occurrence.recurring_transaction %>
+
+<div class="grid grid-cols-12 items-center gap-4 py-3 px-4 text-sm border-b border-divider last:border-none">
+  <div class="col-span-7 md:col-span-6 flex items-center gap-3 min-w-0">
+    <% if recurring_transaction.merchant&.logo_url.present? %>
+      <%= image_tag recurring_transaction.merchant.logo_url, class: "w-8 h-8 rounded-full shrink-0", loading: "lazy" %>
+    <% else %>
+      <%= render DS::FilledIcon.new(
+        variant: :text,
+        text: recurring_transaction.display_name,
+        size: "md",
+        rounded: true
+      ) %>
+    <% end %>
+
+    <div class="min-w-0">
+      <div class="flex items-center gap-2 min-w-0">
+        <% if occurrence.executed? && occurrence.entry.present? %>
+          <%= link_to recurring_transaction.display_name,
+              entry_path(occurrence.entry),
+              data: { turbo_frame: "drawer", turbo_prefetch: false },
+              class: "font-medium text-primary truncate hover:underline" %>
+        <% else %>
+          <span class="font-medium text-primary truncate"><%= recurring_transaction.display_name %></span>
+        <% end %>
+
+        <% if recurring_transaction.transfer? %>
+          <%= render DS::Pill.new(label: t("recurring_transactions.badges.transfer"), tone: :info, marker: false) %>
+        <% elsif recurring_transaction.manual? %>
+          <%= render DS::Pill.new(label: t("recurring_transactions.badges.manual"), tone: :info, marker: false) %>
+        <% end %>
+      </div>
+
+      <p class="text-xs text-secondary truncate">
+        <% if occurrence.executed? && occurrence.entry.present? %>
+          <%= t("recurring_transactions.executed_on", date: l(occurrence.entry.date, format: :short)) %>
+          <% if occurrence.entry.account.present? %>
+            · <%= occurrence.entry.account.name %>
+          <% end %>
+        <% elsif recurring_transaction.account.present? %>
+          <%= recurring_transaction.account.name %>
+          <% if recurring_transaction.transfer? && recurring_transaction.destination_account.present? %>
+            → <%= recurring_transaction.destination_account.name %>
+          <% end %>
+        <% end %>
+      </p>
+    </div>
+  </div>
+
+  <div class="hidden md:block md:col-span-3">
+    <%= render "recurring_transactions/status_pill", occurrence: occurrence %>
+  </div>
+
+  <div class="col-span-3 md:col-span-2 text-right font-medium privacy-sensitive">
+    <% if occurrence.executed? && occurrence.entry.present? %>
+      <span class="<%= occurrence.entry.amount.negative? ? "text-success" : "text-primary" %>">
+        <%= format_money(-occurrence.entry.amount_money) %>
+      </span>
+    <% elsif recurring_transaction.transfer? %>
+      <span class="text-secondary"><%= format_money(recurring_transaction.amount_money.abs) %></span>
+    <% elsif recurring_transaction.manual? && recurring_transaction.has_amount_variance? %>
+      <span class="<%= recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>"
+            title="<%= t("recurring_transactions.amount_range", min: format_money(-recurring_transaction.expected_amount_min_money), max: format_money(-recurring_transaction.expected_amount_max_money)) %>">
+        ~<%= format_money(-recurring_transaction.expected_amount_avg_money) %>
+      </span>
+    <% else %>
+      <span class="<%= recurring_transaction.amount.negative? ? "text-success" : "text-primary" %>">
+        <%= format_money(-recurring_transaction.amount_money) %>
+      </span>
+    <% end %>
+  </div>
+
+  <div class="col-span-2 md:col-span-1 flex justify-end">
+    <%= render DS::Menu.new do |menu| %>
+      <% unless occurrence.executed? || recurring_transaction.transfer? %>
+        <% menu.with_item(
+            variant: "link",
+            text: t("recurring_transactions.execute"),
+            href: new_transaction_path(
+              recurring_transaction_id: recurring_transaction.id,
+              occurrence_date: occurrence.due_date
+            ),
+            icon: "circle-play",
+            data: { turbo_frame: :modal }) %>
+        <% menu.with_item(
+            variant: "link",
+            text: t("recurring_transactions.match_existing"),
+            href: match_recurring_transaction_path(
+              recurring_transaction,
+              due_date: occurrence.due_date,
+              view: view,
+              month: month_param
+            ),
+            icon: "link-2",
+            data: { turbo_frame: :modal }) %>
+      <% end %>
+
+      <% menu.with_item(
+          variant: "link",
+          text: t("recurring_transactions.edit"),
+          href: edit_recurring_transaction_path(recurring_transaction, view: view, month: month_param),
+          icon: "pencil",
+          data: { turbo_frame: :modal }) %>
+
+      <% menu.with_item(
+          variant: "button",
+          text: recurring_transaction.active? ? t("recurring_transactions.pause") : t("recurring_transactions.resume"),
+          href: toggle_status_recurring_transaction_path(recurring_transaction, view: view, month: month_param),
+          method: :post,
+          icon: recurring_transaction.active? ? "pause" : "play") %>
+
+      <% menu.with_item(
+          variant: "button",
+          text: t("recurring_transactions.delete"),
+          href: recurring_transaction_path(recurring_transaction, view: view, month: month_param),
+          method: :delete,
+          icon: "trash-2",
+          confirm: CustomConfirm.new(
+            title: t("recurring_transactions.confirm_delete_title"),
+            body: t("recurring_transactions.confirm_delete"),
+            btn_text: t("recurring_transactions.delete"),
+            destructive: true
+          )) %>
+    <% end %>
+  </div>
+</div>

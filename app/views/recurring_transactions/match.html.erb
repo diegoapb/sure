@@ -1,0 +1,45 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(
+      title: t("recurring_transactions.match_title", name: @recurring_transaction.display_name),
+      subtitle: t("recurring_transactions.match_subtitle", date: l(@due_date, format: :long))) %>
+  <% dialog.with_body do %>
+    <% if @candidate_entries.empty? %>
+      <%= render DS::EmptyState.new(
+        icon: "search-x",
+        title: t("recurring_transactions.no_candidates.title"),
+        description: t("recurring_transactions.no_candidates.description")
+      ) %>
+    <% else %>
+      <div class="space-y-1">
+        <% @candidate_entries.each do |entry| %>
+          <div class="flex items-center justify-between gap-3 py-2 px-3 rounded-lg hover:bg-surface-hover">
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-primary truncate"><%= entry.name %></p>
+              <p class="text-xs text-secondary truncate">
+                <%= l(entry.date, format: :short) %>
+                <% if entry.account.present? %>
+                  · <%= entry.account.name %>
+                <% end %>
+              </p>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <span class="text-sm font-medium privacy-sensitive <%= entry.amount.negative? ? "text-success" : "text-primary" %>">
+                <%= format_money(-entry.amount_money) %>
+              </span>
+              <%= render DS::Link.new(
+                  text: t("recurring_transactions.match_action"),
+                  variant: "outline",
+                  href: match_recurring_transaction_path(
+                    @recurring_transaction,
+                    entry_id: entry.id,
+                    view: params[:view],
+                    month: params[:month]
+                  ),
+                  method: :post) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

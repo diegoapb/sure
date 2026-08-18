@@ -1,0 +1,84 @@
+<%# locals: (recurring_transaction:, merchants:, accounts:) %>
+
+<%
+  form_url = recurring_transaction.new_record? ?
+    recurring_transactions_path(view: params[:view], month: params[:month]) :
+    recurring_transaction_path(recurring_transaction, view: params[:view], month: params[:month])
+
+  selected_nature = params.dig(:recurring_transaction, :nature).presence ||
+    (recurring_transaction.amount.present? && recurring_transaction.amount.negative? ? "inflow" : "outflow")
+%>
+
+<%= styled_form_with model: recurring_transaction, url: form_url, class: "space-y-4" do |f| %>
+  <% if recurring_transaction.errors.any? %>
+    <%= render "shared/form_errors", model: recurring_transaction %>
+  <% end %>
+
+  <section class="space-y-2">
+    <div class="form-field">
+      <%= label_tag "recurring_transaction_nature", t("recurring_transactions.form.nature"), class: "form-field__label" %>
+      <%= select_tag "recurring_transaction[nature]",
+          options_for_select(
+            [
+              [ t("recurring_transactions.form.expense"), "outflow" ],
+              [ t("recurring_transactions.form.income"), "inflow" ]
+            ],
+            selected_nature
+          ),
+          id: "recurring_transaction_nature",
+          class: "form-field__input" %>
+    </div>
+
+    <%= f.text_field :name,
+        label: t("recurring_transactions.form.name"),
+        placeholder: t("recurring_transactions.form.name_placeholder") %>
+
+    <%= f.collection_select :merchant_id, merchants, :id, :name,
+        { include_blank: t("recurring_transactions.form.no_merchant"),
+          label: t("recurring_transactions.form.merchant"),
+          variant: :logo,
+          searchable: true,
+          menu_placement: :auto } %>
+
+    <%= f.collection_select :account_id, accounts, :id, :name,
+        { include_blank: t("recurring_transactions.form.any_account"),
+          label: t("recurring_transactions.form.account"),
+          variant: :logo,
+          searchable: true,
+          menu_placement: :auto } %>
+
+    <%= f.money_field :amount,
+        label: t("recurring_transactions.form.amount"),
+        required: true,
+        value: recurring_transaction.amount&.abs,
+        min: 0 %>
+
+    <%= f.number_field :expected_day_of_month,
+        label: t("recurring_transactions.form.expected_day_of_month"),
+        required: true,
+        min: 1,
+        max: 31 %>
+  </section>
+
+  <%= render DS::Disclosure.new(title: t("recurring_transactions.form.variance_details")) do %>
+    <section class="space-y-2">
+      <p class="text-xs text-secondary"><%= t("recurring_transactions.form.variance_help") %></p>
+
+      <%= f.number_field :expected_amount_min,
+          label: t("recurring_transactions.form.expected_amount_min"),
+          min: 0,
+          step: :any,
+          value: recurring_transaction.expected_amount_min&.abs %>
+
+      <%= f.number_field :expected_amount_max,
+          label: t("recurring_transactions.form.expected_amount_max"),
+          min: 0,
+          step: :any,
+          value: recurring_transaction.expected_amount_max&.abs %>
+    </section>
+  <% end %>
+
+  <section>
+    <%= f.submit recurring_transaction.new_record? ? t("recurring_transactions.form.create") : t("recurring_transactions.form.update") %>
+  </section>
+<% end %>
