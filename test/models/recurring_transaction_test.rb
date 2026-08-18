@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RecurringTransactionTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   def setup
     @family = families(:dylan_family)
     @merchant = merchants(:netflix)
@@ -1286,4 +1288,42 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_nil recurring.expected_amount_max
     assert_nil recurring.expected_amount_avg
   end
+
+  test "link_transaction! links the transaction and records the occurrence" do
+    recurring = build_linkable_recurring(last_occurrence_date: 1.month.ago.to_date)
+    entry = create_transaction(amount: 15.99, date: Date.current, name: "Netflix")
+
+    recurring.link_transaction!(entry.entryable)
+
+    assert_equal recurring, entry.entryable.reload.recurring_transaction
+    assert_equal Date.current, recurring.reload.last_occurrence_date
+    assert_equal 4, recurring.occurrence_count
+  end
+
+  test "link_transaction! with an older transaction links without regressing occurrence tracking" do
+    recurring = build_linkable_recurring(last_occurrence_date: Date.current)
+    entry = create_transaction(amount: 15.99, date: 2.months.ago.to_date, name: "Netflix")
+
+    assert_no_changes -> { recurring.reload.last_occurrence_date } do
+      recurring.link_transaction!(entry.entryable)
+    end
+
+    assert_equal recurring, entry.entryable.reload.recurring_transaction
+  end
+
+  private
+
+    def build_linkable_recurring(last_occurrence_date:)
+      @family.recurring_transactions.create!(
+        account: @account,
+        merchant: @merchant,
+        amount: 15.99,
+        currency: "USD",
+        expected_day_of_month: 15,
+        last_occurrence_date: last_occurrence_date,
+        next_expected_date: 1.month.from_now.to_date,
+        status: "active",
+        occurrence_count: 3
+      )
+    end
 end

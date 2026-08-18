@@ -12,6 +12,7 @@ es:
         home: Inicio
         reports: Informes
         goals: Objetivos
+        recurring: Recurrentes
         transactions: Transacciones
     auth:
       existing_account: ¿Ya tienes una cuenta?
