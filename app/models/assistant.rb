@@ -62,7 +62,10 @@ module Assistant
         Function::DeleteTransaction,
         Function::UpdateBudget,
         Function::GetRecurringTransactions,
-        Function::CreateRecurringTransaction
+        Function::CreateRecurringTransaction,
+        Function::UpdateRecurringTransaction,
+        Function::PauseRecurringTransaction,
+        Function::DeleteRecurringTransaction
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
