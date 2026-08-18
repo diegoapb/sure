@@ -39,6 +39,7 @@ module Assistant
       classes = [
         Function::GetTransactions,
         Function::GetAccounts,
+        Function::CreateAccount,
         Function::GetHoldings,
         Function::GetBalanceSheet,
         Function::GetIncomeStatement,
@@ -49,11 +50,22 @@ module Assistant
         Function::GetTags,
         Function::CreateTag,
         Function::UpdateTag,
+        Function::GetMerchants,
+        Function::CreateMerchant,
+        Function::UpdateMerchant,
+        Function::DeleteMerchant,
         Function::GetCategories,
         Function::CreateCategory,
         Function::UpdateCategory,
+        Function::CreateTransaction,
         Function::UpdateTransaction,
-        Function::UpdateBudget
+        Function::DeleteTransaction,
+        Function::UpdateBudget,
+        Function::GetRecurringTransactions,
+        Function::CreateRecurringTransaction,
+        Function::UpdateRecurringTransaction,
+        Function::PauseRecurringTransaction,
+        Function::DeleteRecurringTransaction
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
