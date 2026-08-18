@@ -138,6 +138,56 @@ class RecurringTransaction < ApplicationRecord
     )
   end
 
+  # Build a manual recurring transaction from scratch (no seed transaction),
+  # e.g. from the assistant/MCP tools or a web form. Applies the manual-pattern
+  # defaults: anchored on today (the DB requires a non-null
+  # last_occurrence_date), next expected date projected from today, and — when
+  # no explicit range is given — amount variance derived from matching
+  # historical transactions, mirroring `create_from_transaction`.
+  # Returns an unsaved record so callers can handle validation errors.
+  def self.build_manual(family:, amount:, expected_day_of_month:, merchant: nil, name: nil, account: nil,
+                        currency: nil, expected_amount_min: nil, expected_amount_max: nil)
+    currency = currency.presence || family.currency
+    name = nil if merchant.present?
+
+    if expected_amount_min.present? && expected_amount_max.present?
+      variance = {
+        expected_amount_min: expected_amount_min,
+        expected_amount_max: expected_amount_max,
+        expected_amount_avg: (expected_amount_min.to_d + expected_amount_max.to_d) / 2
+      }
+    else
+      amounts = find_matching_transaction_amounts(
+        family: family,
+        merchant_id: merchant&.id,
+        name: name,
+        currency: currency,
+        expected_day: expected_day_of_month,
+        account: account
+      )
+      variance = amounts.empty? ? {} : {
+        expected_amount_min: amounts.min,
+        expected_amount_max: amounts.max,
+        expected_amount_avg: amounts.sum / amounts.size
+      }
+    end
+
+    family.recurring_transactions.new(
+      account: account,
+      merchant: merchant,
+      name: name,
+      amount: amount,
+      currency: currency,
+      expected_day_of_month: expected_day_of_month,
+      last_occurrence_date: Date.current,
+      next_expected_date: calculate_next_expected_date_from_today(expected_day_of_month),
+      status: "active",
+      occurrence_count: 0,
+      manual: true,
+      **variance
+    )
+  end
+
   # Create a manual recurring transaction from an existing transaction
   # Automatically calculates amount variance from past 6 months of matching transactions
   def self.create_from_transaction(transaction, date_variance: 2)

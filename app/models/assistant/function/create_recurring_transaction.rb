@@ -92,24 +92,19 @@ class Assistant::Function::CreateRecurringTransaction < Assistant::Function
       return error("already_exists", "A similar active recurring transaction already exists: '#{duplicate.merchant&.name || duplicate.name}' expected on day #{duplicate.expected_day_of_month}.")
     end
 
-    variance = resolve_variance(params, merchant, name, expected_day, account)
-    return variance if variance.is_a?(Hash) && variance[:success] == false
+    variance_error = validate_variance_params(params)
+    return variance_error if variance_error
 
-    recurring_transaction = family.recurring_transactions.new(
+    recurring_transaction = RecurringTransaction.build_manual(
+      family: family,
       account: account,
       merchant: merchant,
-      name: merchant.present? ? nil : name,
+      name: name,
       amount: params["amount"],
-      currency: params["currency"].presence || family.currency,
+      currency: params["currency"],
       expected_day_of_month: expected_day,
-      # No real occurrence yet — anchor the pattern on today (DB requires a
-      # non-null last_occurrence_date) and project the next date from it.
-      last_occurrence_date: Date.current,
-      next_expected_date: RecurringTransaction.calculate_next_expected_date_from_today(expected_day),
-      status: "active",
-      occurrence_count: 0,
-      manual: true,
-      **variance
+      expected_amount_min: params["expected_amount_min"],
+      expected_amount_max: params["expected_amount_max"]
     )
 
     if recurring_transaction.save
@@ -145,34 +140,17 @@ class Assistant::Function::CreateRecurringTransaction < Assistant::Function
       end
     end
 
-    # Explicit min/max take precedence; otherwise mirror
-    # RecurringTransaction.create_from_transaction and derive the range from
-    # matching historical transactions.
-    def resolve_variance(params, merchant, name, expected_day, account)
+    # Parameter-shape checks only — variance derivation and defaults live in
+    # RecurringTransaction.build_manual.
+    def validate_variance_params(params)
       min = params["expected_amount_min"]
       max = params["expected_amount_max"]
+      return nil if min.blank? && max.blank?
 
-      if min.present? || max.present?
-        return error("variance_incomplete", "Provide both expected_amount_min and expected_amount_max.") if min.blank? || max.blank?
-        return error("variance_invalid", "expected_amount_min cannot be greater than expected_amount_max.") if min.to_d > max.to_d
-        return { expected_amount_min: min, expected_amount_max: max, expected_amount_avg: (min.to_d + max.to_d) / 2 }
-      end
+      return error("variance_incomplete", "Provide both expected_amount_min and expected_amount_max.") if min.blank? || max.blank?
+      return error("variance_invalid", "expected_amount_min cannot be greater than expected_amount_max.") if min.to_d > max.to_d
 
-      amounts = RecurringTransaction.find_matching_transaction_amounts(
-        family: family,
-        merchant_id: merchant&.id,
-        name: merchant.present? ? nil : name,
-        currency: params["currency"].presence || family.currency,
-        expected_day: expected_day,
-        account: account
-      )
-      return {} if amounts.empty?
-
-      {
-        expected_amount_min: amounts.min,
-        expected_amount_max: amounts.max,
-        expected_amount_avg: amounts.sum / amounts.size
-      }
+      nil
     end
 
     def serialize(rt)

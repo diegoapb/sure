@@ -1106,4 +1106,89 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       @family.recurring_transactions.create!(base_attrs)
     end
   end
+
+  test "build_manual applies manual-pattern defaults" do
+    recurring = RecurringTransaction.build_manual(
+      family: @family,
+      name: "Rent",
+      amount: 1200,
+      expected_day_of_month: 1
+    )
+
+    assert recurring.new_record?
+    assert recurring.valid?
+    assert recurring.manual?
+    assert_equal "active", recurring.status
+    assert_equal 0, recurring.occurrence_count
+    assert_equal @family.currency, recurring.currency
+    assert_equal Date.current, recurring.last_occurrence_date
+    assert recurring.next_expected_date.future?
+  end
+
+  test "build_manual prefers merchant over free-text name" do
+    recurring = RecurringTransaction.build_manual(
+      family: @family,
+      merchant: @merchant,
+      name: "Should be ignored",
+      amount: 15.99,
+      expected_day_of_month: 5
+    )
+
+    assert_equal @merchant, recurring.merchant
+    assert_nil recurring.name
+  end
+
+  test "build_manual uses explicit amount variance when provided" do
+    recurring = RecurringTransaction.build_manual(
+      family: @family,
+      name: "Utilities",
+      amount: 80,
+      expected_day_of_month: 10,
+      expected_amount_min: 60,
+      expected_amount_max: 100
+    )
+
+    assert_equal 60, recurring.expected_amount_min
+    assert_equal 100, recurring.expected_amount_max
+    assert_equal 80, recurring.expected_amount_avg
+  end
+
+  test "build_manual derives amount variance from matching historical transactions" do
+    [ 14.99, 16.99 ].each_with_index do |amount, months_ago|
+      transaction = Transaction.create!(merchant: @merchant)
+      @account.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + 4.days,
+        amount: amount,
+        currency: "USD",
+        name: "Netflix Subscription",
+        entryable: transaction
+      )
+    end
+
+    recurring = RecurringTransaction.build_manual(
+      family: @family,
+      merchant: @merchant,
+      account: @account,
+      amount: 15.99,
+      currency: "USD",
+      expected_day_of_month: 5
+    )
+
+    assert_equal 14.99, recurring.expected_amount_min
+    assert_equal 16.99, recurring.expected_amount_max
+    assert_in_delta 15.99, recurring.expected_amount_avg.to_f, 0.01
+  end
+
+  test "build_manual leaves variance empty when there is no matching history" do
+    recurring = RecurringTransaction.build_manual(
+      family: @family,
+      name: "Brand New Sub",
+      amount: 9.99,
+      expected_day_of_month: 20
+    )
+
+    assert_nil recurring.expected_amount_min
+    assert_nil recurring.expected_amount_max
+    assert_nil recurring.expected_amount_avg
+  end
 end
