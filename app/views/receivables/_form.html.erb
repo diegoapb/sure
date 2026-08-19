@@ -1,0 +1,47 @@
+<%# locals: (account:, url:) %>
+
+<%= render "accounts/form", account: account, url: url do |form| %>
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-2">
+    <%= form.fields_for :accountable do |receivable_form| %>
+      <div>
+        <%= receivable_form.text_field :debtor_name,
+                                 label: t("receivables.form.debtor_name"),
+                                 placeholder: t("receivables.form.debtor_name_placeholder"),
+                                 required: true %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= receivable_form.money_field :initial_balance,
+                                 label: t("receivables.form.initial_balance"),
+                                 default_currency: Current.family.currency,
+                                 required: true %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= receivable_form.number_field :interest_rate,
+                                 label: t("receivables.form.interest_rate"),
+                                 label_tooltip: t("receivables.form.interest_rate_hint"),
+                                 placeholder: t("receivables.form.interest_rate_placeholder"),
+                                 min: 0,
+                                 step: 0.005 %>
+        <%= receivable_form.number_field :term_months,
+                                 label: t("receivables.form.term_months"),
+                                 placeholder: t("receivables.form.term_months_placeholder"),
+                                 min: 1 %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= receivable_form.date_field :start_date,
+                                 label: t("receivables.form.start_date") %>
+      </div>
+
+      <div>
+        <%= receivable_form.select :subtype,
+                  Receivable.subtype_options_for_select,
+                  { label: true, prompt: t("receivables.form.subtype_prompt"), include_blank: t("receivables.form.none") } %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
