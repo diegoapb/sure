@@ -58,6 +58,7 @@ module Assistant
         Function::CreateCategory,
         Function::UpdateCategory,
         Function::CreateTransaction,
+        Function::CreateTransfer,
         Function::UpdateTransaction,
         Function::DeleteTransaction,
         Function::UpdateBudget,
