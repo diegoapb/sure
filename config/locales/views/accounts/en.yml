@@ -147,6 +147,7 @@ en:
       crypto: Crypto
       property: Property
       vehicle: Vehicle
+      receivable: Receivable
       other_asset: Other Asset
       credit_card: Credit Card
       loan: Loan
@@ -157,6 +158,7 @@ en:
       crypto: Crypto
       property: Properties
       vehicle: Vehicles
+      receivable: Receivables
       other_asset: Other Assets
       credit_card: Credit Cards
       loan: Loans

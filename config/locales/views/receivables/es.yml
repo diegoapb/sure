@@ -1,0 +1,69 @@
+---
+es:
+  receivables:
+    edit:
+      edit: Editar %{account}
+    form:
+      debtor_name: Deudor
+      debtor_name_placeholder: "¿Quién te debe?"
+      initial_balance: Monto original
+      interest_rate: Tasa de interés (anual)
+      interest_rate_hint: Tasa anual nominal. Se divide entre 12 para calcular la cuota mensual.
+      interest_rate_placeholder: '1.5'
+      term_months: Plazo (meses)
+      term_months_placeholder: '12'
+      start_date: Fecha de inicio
+      none: Ninguno
+      subtype_prompt: Selecciona el tipo de cuenta por cobrar
+    new:
+      title: Ingresa los detalles de la cuenta por cobrar
+    payments:
+      created: Pago registrado
+      invalid_amount: El monto del pago debe ser mayor que cero
+      entry_name: Pago de %{debtor}
+    new_payment:
+      title: Registrar pago de %{account}
+      amount: Monto recibido
+      date: Fecha
+      destination_account: Depositar en cuenta (opcional)
+      no_destination: No registrada en Sure
+      submit: Registrar pago
+    subtypes:
+      personal_loan:
+        short: Préstamo personal
+        long: Préstamo personal
+      sale_credit:
+        short: Venta a crédito
+        long: Venta a crédito
+      rent:
+        short: Arriendo
+        long: Arriendo por cobrar
+      services:
+        short: Servicios
+        long: Servicios profesionales
+      other:
+        short: Otro
+        long: Otra cuenta por cobrar
+    tabs:
+      overview:
+        original_principal: Monto original
+        remaining_balance: Saldo pendiente
+        interest_rate: Tasa de interés
+        monthly_payment: Cuota mensual
+        debtor: Deudor
+        next_due_date: Próximo vencimiento
+        not_applicable: N/A
+        installments_title: Plan de cuotas
+        register_payment: Registrar pago
+        due_date: Vencimiento
+        principal: Capital
+        interest: Interés
+        total: Total
+        paid: Pagado
+        status: Estado
+        status_paid: Pagada
+        status_partial: Parcial
+        status_pending: Pendiente
+        status_overdue: Vencida
+        no_installments: Sin plan de cuotas (cobro abierto). Registra los pagos a medida que lleguen.
+        edit_receivable_details: Editar detalles de la cuenta por cobrar

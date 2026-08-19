@@ -1,0 +1,69 @@
+---
+en:
+  receivables:
+    edit:
+      edit: Edit %{account}
+    form:
+      debtor_name: Debtor
+      debtor_name_placeholder: Who owes you?
+      initial_balance: Original amount
+      interest_rate: Interest rate (annual)
+      interest_rate_hint: Nominal annual rate. It is divided by 12 to compute the monthly installment.
+      interest_rate_placeholder: '1.5'
+      term_months: Term (months)
+      term_months_placeholder: '12'
+      start_date: Start date
+      none: None
+      subtype_prompt: Select receivable type
+    new:
+      title: Enter receivable details
+    payments:
+      created: Payment registered
+      invalid_amount: Payment amount must be greater than zero
+      entry_name: Payment from %{debtor}
+    new_payment:
+      title: Register payment for %{account}
+      amount: Amount received
+      date: Date
+      destination_account: Deposit into account (optional)
+      no_destination: Not tracked in Sure
+      submit: Register payment
+    subtypes:
+      personal_loan:
+        short: Personal Loan
+        long: Personal Loan
+      sale_credit:
+        short: Sale on Credit
+        long: Sale on Credit
+      rent:
+        short: Rent
+        long: Rent Receivable
+      services:
+        short: Services
+        long: Professional Services
+      other:
+        short: Other
+        long: Other Receivable
+    tabs:
+      overview:
+        original_principal: Original Amount
+        remaining_balance: Outstanding Balance
+        interest_rate: Interest Rate
+        monthly_payment: Monthly Installment
+        debtor: Debtor
+        next_due_date: Next Due Date
+        not_applicable: N/A
+        installments_title: Installment schedule
+        register_payment: Register payment
+        due_date: Due date
+        principal: Principal
+        interest: Interest
+        total: Total
+        paid: Paid
+        status: Status
+        status_paid: Paid
+        status_partial: Partial
+        status_pending: Pending
+        status_overdue: Overdue
+        no_installments: No installment schedule (open receivable). Register payments as they come in.
+        edit_receivable_details: Edit receivable details

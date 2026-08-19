@@ -15,6 +15,8 @@ en:
     settings:
       enable_label: Enable Recurring Transactions
       enable_description: Automatically detect recurring transaction patterns and show upcoming projected transactions.
+      enable_detection: Enable automatic detection
+      disable_detection: Disable automatic detection
     settings_updated: Recurring transactions settings updated
     info:
       title: Automatic Pattern Detection
@@ -50,6 +52,67 @@ en:
       inactive: Inactive
     badges:
       manual: Manual
+      transfer: Transfer
+    new: New recurring transaction
+    edit: Edit
+    edit_title: Edit recurring transaction
+    created: Recurring transaction created
+    updated: Recurring transaction updated
+    matched: Transaction matched to recurring pattern
+    execute: Execute
+    match_existing: Match existing transaction
+    pause: Pause
+    resume: Resume
+    delete: Delete
+    confirm_delete_title: Delete recurring transaction?
+    previous_month: Previous month
+    next_month: Next month
+    today: Today
+    month_format: "%B %Y"
+    view_switcher: View
+    list_view: List
+    calendar_view: Calendar
+    inactive_section: Inactive
+    last_seen: "Last seen %{date}"
+    executed_on: "Executed on %{date}"
+    occurrence_status:
+      executed: Executed
+      pending: Pending
+      overdue: Overdue
+    summary:
+      executed:
+        one: "%{count} executed"
+        other: "%{count} executed"
+      pending:
+        one: "%{count} pending"
+        other: "%{count} pending"
+    no_occurrences:
+      title: Nothing expected this month
+      description: No active recurring transactions are expected during this month.
+    match_title: "Match: %{name}"
+    match_subtitle: "Pick the transaction that corresponds to the occurrence expected on %{date}"
+    match_action: Link
+    no_candidates:
+      title: No candidate transactions
+      description: There are no unlinked transactions in this month to match against this recurring transaction.
+    form:
+      nature: Type
+      expense: Expense
+      income: Income
+      name: Name
+      name_placeholder: e.g. Rent, Netflix, Gym
+      merchant: Merchant
+      no_merchant: No merchant
+      account: Account
+      any_account: Any account
+      amount: Amount
+      expected_day_of_month: Expected day of month
+      variance_details: Expected amount range (optional)
+      variance_help: If the amount varies month to month, set the expected minimum and maximum so matching can tolerate the variation.
+      expected_amount_min: Minimum amount
+      expected_amount_max: Maximum amount
+      create: Create recurring transaction
+      update: Update recurring transaction
     transfer_marked_as_recurring: Transfer marked as recurring
     transfer_already_exists: A recurring transfer already exists for this account pair
     transfer_creation_failed: Failed to create recurring transfer. Please check the transfer details and try again.

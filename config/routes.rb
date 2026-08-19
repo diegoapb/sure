@@ -494,7 +494,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :recurring_transactions, only: %i[index destroy] do
+  resources :recurring_transactions, only: %i[index new create edit update destroy] do
     collection do
       match :identify, via: [ :get, :post ]
       match :cleanup, via: [ :get, :post ]
@@ -503,6 +503,8 @@ Rails.application.routes.draw do
 
     member do
       match :toggle_status, via: [ :get, :post ]
+      get :match
+      post :match, action: :create_match
     end
   end
 
@@ -589,6 +591,12 @@ Rails.application.routes.draw do
   resources :vehicles, only: %i[new create edit update]
   resources :credit_cards, only: %i[new create edit update]
   resources :loans, only: %i[new create edit update]
+  resources :receivables, only: %i[new create edit update] do
+    member do
+      get :new_payment
+      post :create_payment
+    end
+  end
   resources :cryptos, only: %i[new create edit update]
   resources :other_assets, only: %i[new create edit update]
   resources :other_liabilities, only: %i[new create edit update]

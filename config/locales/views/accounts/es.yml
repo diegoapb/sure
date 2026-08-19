@@ -140,6 +140,7 @@ es:
       crypto: Cripto
       property: Propiedad
       vehicle: Vehículo
+      receivable: Cuenta por cobrar
       other_asset: Otro activo
       credit_card: Tarjeta de crédito
       loan: Préstamo
@@ -150,6 +151,7 @@ es:
       crypto: Criptomonedas
       property: Propiedades
       vehicle: Vehículos
+      receivable: Cuentas por cobrar
       other_asset: Otros activos
       credit_card: Tarjetas de crédito
       loan: Préstamos

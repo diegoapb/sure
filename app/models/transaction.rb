@@ -4,9 +4,11 @@ class Transaction < ApplicationRecord
   belongs_to :category, optional: true
   belongs_to :merchant, optional: true
   belongs_to :transfer, optional: true
+  belongs_to :recurring_transaction, optional: true
 
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
+  has_many :receivable_payments, dependent: :destroy
 
   # File attachments (receipts, invoices, etc.) using Active Storage
   # Supports images (JPEG, PNG, GIF, WebP) and PDFs up to 10MB each

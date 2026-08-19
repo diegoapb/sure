@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_12_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_18_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1610,6 +1610,49 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_12_000000) do
     t.index ["status"], name: "index_questrade_items_on_status"
   end
 
+  create_table "receivable_installments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "receivable_id", null: false
+    t.integer "number", null: false
+    t.date "due_date", null: false
+    t.decimal "principal_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "interest_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "total_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "paid_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "status", default: "pending", null: false
+    t.date "paid_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["receivable_id", "due_date"], name: "index_receivable_installments_on_receivable_id_and_due_date"
+    t.index ["receivable_id", "number"], name: "index_receivable_installments_on_receivable_id_and_number", unique: true
+    t.index ["receivable_id"], name: "index_receivable_installments_on_receivable_id"
+  end
+
+  create_table "receivable_payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "receivable_installment_id", null: false
+    t.uuid "transaction_id", null: false
+    t.decimal "amount_applied", precision: 19, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["receivable_installment_id"], name: "index_receivable_payments_on_receivable_installment_id"
+    t.index ["transaction_id"], name: "index_receivable_payments_on_transaction_id"
+  end
+
+  create_table "receivables", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "debtor_name"
+    t.string "debtor_contact"
+    t.decimal "interest_rate", precision: 10, scale: 3
+    t.string "rate_type", default: "fixed"
+    t.integer "term_months"
+    t.string "payment_frequency", default: "monthly", null: false
+    t.date "start_date"
+    t.decimal "initial_balance", precision: 19, scale: 4
+    t.string "subtype"
+    t.text "notes"
+    t.jsonb "locked_attributes", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "recurring_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.uuid "merchant_id"
@@ -2143,6 +2186,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_12_000000) do
     t.jsonb "extra", default: {}, null: false
     t.string "investment_activity_label"
     t.uuid "transfer_id"
+    t.uuid "recurring_transaction_id"
     t.index "(((extra -> 'goal'::text) ->> 'pledge_id'::text))", name: "ix_transactions_extra_goal_pledge_id", unique: true, where: "(((extra -> 'goal'::text) ->> 'pledge_id'::text) IS NOT NULL)"
     t.index ["category_id"], name: "index_transactions_on_category_id"
     t.index ["external_id"], name: "index_transactions_on_external_id"
@@ -2150,6 +2194,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_12_000000) do
     t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
+    t.index ["recurring_transaction_id"], name: "index_transactions_on_recurring_transaction_id"
     t.index ["transfer_id"], name: "index_transactions_on_transfer_id"
   end
 
@@ -2414,6 +2459,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_12_000000) do
   add_foreign_key "plaid_items", "families"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
+  add_foreign_key "receivable_installments", "receivables"
+  add_foreign_key "receivable_payments", "receivable_installments"
+  add_foreign_key "receivable_payments", "transactions"
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "families"
@@ -2447,6 +2495,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_12_000000) do
   add_foreign_key "trading212_items", "families"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
+  add_foreign_key "transactions", "recurring_transactions", on_delete: :nullify
   add_foreign_key "transactions", "transfers", column: "transfer_id"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade

@@ -1,0 +1,76 @@
+<%# locals: (schedule:, current_month:, view:, month_param:) %>
+
+<%
+  first_day = current_month.beginning_of_week
+  last_day = current_month.end_of_month.end_of_week
+  day_names = I18n.t("date.abbr_day_names").rotate(Date.beginning_of_week == :monday ? 1 : 0)
+%>
+
+<div class="bg-container rounded-xl shadow-border-xs p-2 md:p-4 overflow-x-auto">
+  <div class="min-w-[640px]">
+    <div class="grid grid-cols-7">
+      <% day_names.each do |day_name| %>
+        <div class="py-2 px-2 text-xs font-medium text-secondary uppercase text-center"><%= day_name %></div>
+      <% end %>
+    </div>
+
+    <div class="grid grid-cols-7 border-t border-l border-divider rounded-lg overflow-hidden">
+      <% (first_day..last_day).each do |day| %>
+        <div class="min-h-24 border-b border-r border-divider p-1.5 space-y-1 <%= "bg-container-inset" unless day.month == current_month.month %>">
+          <div class="flex justify-end">
+            <% if day == Date.current %>
+              <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-inverse text-inverse text-xs font-medium"><%= day.day %></span>
+            <% else %>
+              <span class="text-xs <%= day.month == current_month.month ? "text-secondary" : "text-subdued" %>"><%= day.day %></span>
+            <% end %>
+          </div>
+
+          <% schedule.occurrences_on(day).each do |occurrence| %>
+            <% recurring_transaction = occurrence.recurring_transaction %>
+            <% amount_money = occurrence.entry&.amount_money || recurring_transaction.expected_amount_avg_money || recurring_transaction.amount_money %>
+            <% chip_title = "#{recurring_transaction.display_name} · #{format_money(-amount_money)}" %>
+
+            <% if occurrence.executed? && occurrence.entry.present? %>
+              <%= link_to entry_path(occurrence.entry),
+                  data: { turbo_frame: "drawer", turbo_prefetch: false },
+                  class: "block min-w-0" do %>
+                <%= render DS::Pill.new(
+                    label: recurring_transaction.display_name,
+                    tone: :success, marker: false, icon: "circle-check",
+                    truncate: true, title: chip_title) %>
+              <% end %>
+            <% elsif recurring_transaction.transfer? %>
+              <%= link_to edit_recurring_transaction_path(recurring_transaction, view: view, month: month_param),
+                  data: { turbo_frame: :modal },
+                  class: "block min-w-0" do %>
+                <%= render DS::Pill.new(
+                    label: recurring_transaction.display_name,
+                    tone: occurrence.overdue? ? :warning : :info, marker: false, icon: "arrow-right-left",
+                    truncate: true, title: chip_title) %>
+              <% end %>
+            <% else %>
+              <%= link_to new_transaction_path(
+                    recurring_transaction_id: recurring_transaction.id,
+                    occurrence_date: occurrence.due_date
+                  ),
+                  data: { turbo_frame: :modal },
+                  class: "block min-w-0" do %>
+                <%= render DS::Pill.new(
+                    label: recurring_transaction.display_name,
+                    tone: occurrence.overdue? ? :warning : :neutral, marker: false,
+                    icon: occurrence.overdue? ? "triangle-alert" : "clock",
+                    truncate: true, title: chip_title) %>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="flex items-center gap-4 text-xs text-secondary px-1">
+  <span class="flex items-center gap-1.5"><%= render DS::Pill.new(tone: :success, dot_only: true, marker: false) %> <%= t("recurring_transactions.occurrence_status.executed") %></span>
+  <span class="flex items-center gap-1.5"><%= render DS::Pill.new(tone: :neutral, dot_only: true, marker: false) %> <%= t("recurring_transactions.occurrence_status.pending") %></span>
+  <span class="flex items-center gap-1.5"><%= render DS::Pill.new(tone: :warning, dot_only: true, marker: false) %> <%= t("recurring_transactions.occurrence_status.overdue") %></span>
+</div>

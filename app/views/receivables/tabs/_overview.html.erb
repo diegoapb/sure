@@ -1,0 +1,113 @@
+<%# locals: (account:) %>
+
+<% receivable = account.receivable %>
+
+<div class="grid grid-cols-3 gap-2">
+  <%= summary_card title: t(".original_principal") do %>
+    <%= format_money receivable.original_balance %>
+  <% end %>
+
+  <%= summary_card title: t(".remaining_balance") do %>
+    <%= format_money account.balance_money %>
+  <% end %>
+
+  <%= summary_card title: t(".interest_rate") do %>
+    <% if receivable.interest_rate.present? %>
+      <%= number_to_percentage(receivable.interest_rate, precision: 3) %>
+    <% else %>
+      <%= t(".not_applicable") %>
+    <% end %>
+  <% end %>
+
+  <%= summary_card title: t(".monthly_payment") do %>
+    <% if receivable.monthly_payment.present? %>
+      <%= format_money(receivable.monthly_payment) %>
+    <% else %>
+      <%= t(".not_applicable") %>
+    <% end %>
+  <% end %>
+
+  <%= summary_card title: t(".debtor") do %>
+    <%= receivable.debtor_name %>
+  <% end %>
+
+  <%= summary_card title: t(".next_due_date") do %>
+    <% if receivable.next_installment.present? %>
+      <%= l(receivable.next_installment.due_date, format: :long) %>
+    <% else %>
+      <%= t(".not_applicable") %>
+    <% end %>
+  <% end %>
+</div>
+
+<% if receivable.installments.any? %>
+  <div class="mt-6 bg-container rounded-xl border border-primary overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3">
+      <h3 class="font-medium text-primary"><%= t(".installments_title") %></h3>
+      <%= render DS::Link.new(
+        text: t(".register_payment"),
+        variant: "primary",
+        href: new_payment_receivable_path(account),
+        frame: :modal
+      ) %>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-secondary border-b border-primary">
+            <th class="px-4 py-2 font-normal">#</th>
+            <th class="px-4 py-2 font-normal"><%= t(".due_date") %></th>
+            <th class="px-4 py-2 font-normal text-right"><%= t(".principal") %></th>
+            <th class="px-4 py-2 font-normal text-right"><%= t(".interest") %></th>
+            <th class="px-4 py-2 font-normal text-right"><%= t(".total") %></th>
+            <th class="px-4 py-2 font-normal text-right"><%= t(".paid") %></th>
+            <th class="px-4 py-2 font-normal"><%= t(".status") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% receivable.installments.each do |installment| %>
+            <tr class="border-b border-primary last:border-b-0 text-primary">
+              <td class="px-4 py-2"><%= installment.number %></td>
+              <td class="px-4 py-2"><%= l(installment.due_date, format: :default) %></td>
+              <td class="px-4 py-2 text-right"><%= format_money Money.new(installment.principal_amount, account.currency) %></td>
+              <td class="px-4 py-2 text-right"><%= format_money Money.new(installment.interest_amount, account.currency) %></td>
+              <td class="px-4 py-2 text-right"><%= format_money Money.new(installment.total_amount, account.currency) %></td>
+              <td class="px-4 py-2 text-right"><%= format_money Money.new(installment.paid_amount, account.currency) %></td>
+              <td class="px-4 py-2">
+                <% if installment.paid? %>
+                  <%= render DS::Pill.new(label: t(".status_paid"), tone: :success, marker: false) %>
+                <% elsif installment.overdue? %>
+                  <%= render DS::Pill.new(label: t(".status_overdue"), tone: :error, marker: false) %>
+                <% elsif installment.status == "partial" %>
+                  <%= render DS::Pill.new(label: t(".status_partial"), tone: :warning, marker: false) %>
+                <% else %>
+                  <%= render DS::Pill.new(label: t(".status_pending"), tone: :neutral, marker: false) %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% else %>
+  <div class="mt-6 flex items-center justify-between bg-container rounded-xl border border-primary px-4 py-3">
+    <p class="text-sm text-secondary"><%= t(".no_installments") %></p>
+    <%= render DS::Link.new(
+      text: t(".register_payment"),
+      variant: "primary",
+      href: new_payment_receivable_path(account),
+      frame: :modal
+    ) %>
+  </div>
+<% end %>
+
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: t(".edit_receivable_details"),
+    variant: "ghost",
+    href: edit_receivable_path(account),
+    frame: :modal
+  ) %>
+</div>

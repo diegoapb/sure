@@ -8,6 +8,41 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  test "creating from a recurring transaction links it and records the occurrence" do
+    recurring = recurring_transactions(:netflix_subscription)
+    original_count = recurring.occurrence_count
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        recurring_transaction_id: recurring.id,
+        entry: {
+          account_id: @entry.account_id,
+          name: "Netflix",
+          date: Date.current,
+          currency: "USD",
+          amount: 15.99,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: { category_id: Category.first.id }
+        }
+      }
+    end
+
+    created_entry = Entry.order(:created_at).last
+    assert_equal recurring, created_entry.entryable.recurring_transaction
+    assert_equal original_count + 1, recurring.reload.occurrence_count
+    assert_equal Date.current, recurring.last_occurrence_date
+  end
+
+  test "new prefills from a recurring transaction" do
+    recurring = recurring_transactions(:netflix_subscription)
+
+    get new_transaction_url(recurring_transaction_id: recurring.id, occurrence_date: Date.current)
+
+    assert_response :success
+    assert_includes response.body, recurring.id
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {
