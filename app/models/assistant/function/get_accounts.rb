@@ -14,6 +14,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
       as_of_date: Date.current,
       accounts: user.accessible_accounts.includes(:balances, :account_providers).map do |account|
         {
+          id: account.id,
           name: account.name,
           balance: account.balance,
           currency: account.currency,
