@@ -1,0 +1,30 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", account: @account.name)) %>
+  <% dialog.with_body do %>
+    <%= styled_form_with url: create_payment_receivable_path(@account), scope: :payment, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
+      <div class="grow space-y-2">
+        <div>
+          <%= form.number_field :amount,
+                                label: t(".amount"),
+                                required: true,
+                                min: 0.01,
+                                step: 0.01 %>
+        </div>
+
+        <div>
+          <%= form.date_field :date,
+                              label: t(".date"),
+                              value: Date.current %>
+        </div>
+
+        <div>
+          <%= form.select :destination_account_id,
+                          Current.family.accounts.active.where(accountable_type: "Depository").order(:name).pluck(:name, :id),
+                          { label: t(".destination_account"), include_blank: t(".no_destination") } %>
+        </div>
+      </div>
+
+      <%= form.submit t(".submit") %>
+    <% end %>
+  <% end %>
+<% end %>
