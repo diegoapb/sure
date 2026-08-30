@@ -40,6 +40,7 @@ module Assistant
         Function::GetTransactions,
         Function::GetAccounts,
         Function::CreateAccount,
+        Function::CreateReceivable,
         Function::GetHoldings,
         Function::GetBalanceSheet,
         Function::GetIncomeStatement,
