@@ -10,21 +10,18 @@ class Assistant::Function::GetMerchants < Assistant::Function
 
     def description
       <<~INSTRUCTIONS
-        Returns merchants defined for the user's family, sorted alphabetically, with pagination.
+        Returns merchants relevant to the user's transactions, sorted alphabetically,
+        with pagination. Each entry includes the stable id needed for
+        update_transaction's merchant_id and the exact name usable in
+        get_transactions' merchants filter.
 
-        Use this when the user wants to see available merchants or before referencing
-        a merchant in another operation like update_merchant or delete_merchant.
-
-        Note on pagination:
-
-        This function can be paginated. You can expect the following properties in the response:
-
-        - `total_pages`: The total number of pages of results
-        - `page`: The current page of results
-        - `page_size`: The number of results per page (this will always be #{default_page_size})
-        - `total_results`: The total number of results
+        Pass `search` to filter by name instead of paging through everything.
       INSTRUCTIONS
     end
+  end
+
+  def strict_mode?
+    false
   end
 
   def params_schema
@@ -33,28 +30,49 @@ class Assistant::Function::GetMerchants < Assistant::Function
       properties: {
         page: {
           type: "integer",
+          minimum: 1,
           description: "Page number (defaults to 1)"
+        },
+        page_size: {
+          type: "integer",
+          minimum: 1,
+          maximum: MAX_PAGE_SIZE,
+          description: "Results per page (defaults to #{self.class.default_page_size})"
+        },
+        search: {
+          type: "string",
+          description: "Case-insensitive substring filter on merchant name"
         }
       }
     )
   end
 
   def call(params = {})
-    merchants_scope = family.merchants.alphabetically
-    pagy = Pagy.new(count: merchants_scope.count, page: params["page"] || 1, limit: default_page_size)
-    merchants = merchants_scope.offset(pagy.offset).limit(pagy.limit)
+    # available_merchants_for scopes to merchants on transactions in accounts
+    # this user can access (plus the family's own merchants), so merchants
+    # seen only in accounts hidden from the user never leak into the list.
+    scope = family.available_merchants_for(user).alphabetically
+
+    if params["search"].present?
+      scope = scope.where("merchants.name ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(params["search"])}%")
+    end
+
+    page_size = resolved_page_size(params)
+    pagy = Pagy.new(count: scope.count, page: resolved_page(params), limit: page_size)
+    merchants = scope.offset(pagy.offset).limit(pagy.limit)
 
     {
-      merchants: merchants.map { |m| { id: m.id, name: m.name, color: m.color, website_url: m.website_url } },
+      merchants: merchants.map { |m|
+        {
+          id: m.id,
+          name: m.name,
+          source: m.type == "FamilyMerchant" ? "family" : "provider"
+        }
+      },
       total_results: pagy.count,
       page: pagy.page,
-      page_size: default_page_size,
+      page_size: page_size,
       total_pages: pagy.pages
     }
   end
-
-  private
-    def default_page_size
-      self.class.default_page_size
-    end
 end
